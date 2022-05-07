@@ -93,10 +93,11 @@ class Bot(commands.Bot):
             if not self.log_guesses:
                 await ctx.send("Guessing is not currently enabled, oops. mericCat")
                 print("Guessing not enabled.")
+                print(f"{ctx.author.display_name} tried to end guessing in {ctx.channel.name} but it was not started.")
             else:
                 self.log_guesses = False
                 await ctx.send("Guessing for the Master Casket is now CLOSED! PauseChamp")
-                print("guessing has ended.")
+                print(f"{ctx.author.display_name} has ended logging guesses in channel: {ctx.channel.name}")
     
     @commands.command()
     async def winner(self, ctx: commands.Context, casket: int):
@@ -110,14 +111,14 @@ class Bot(commands.Bot):
                     #subprocess.call(f'sudo echo "Recent winner: {res_key}" > /dev/fb01', shell=True)
                 else:
                     await ctx.send("Something went wrong, there were no guesses saved. mericChicken")
-                    print("No guesses logged.")
+                    print(f"{ctx.author.display_name} tried picking a winner in {ctx.channel.name}, but no guesses were logged.")
                 # Make sure to clear the dictionary so that past guesses aren't included
                 async with aiofiles.open(f'./logging/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.txt', 'w+') as f:
-                    print("writing")
+                    print(f"{ctx.author.display_name} has chosen a winner in {ctx.channel.name}. Writing guesses to file.")
                     await f.write(json.dumps([self.messages, self.guesses, {'casket': casket}], indent=4))
             else:
                 await ctx.send("Hey you need to ?end the guessing first 4Head")
-                print("Please end the guessing before choosing a winner.")
+                print(f"{ctx.author.display_name} tried to pick a winner in {ctx.channel.name} without ending first.")
 
         
 
