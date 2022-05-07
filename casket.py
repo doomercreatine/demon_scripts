@@ -4,6 +4,10 @@ from email import message
 from twitchio.ext import commands
 import re
 from config import config
+import json
+import datetime
+import aiofiles
+import subprocess
 
 
 class Bot(commands.Bot):
@@ -15,6 +19,7 @@ class Bot(commands.Bot):
         super().__init__(token=config['token'], prefix='?', initial_channels=config['channels'])
         self.log_guesses = False
         self.guesses = {}
+        self.messages = {}
         self.tens = dict(k=1e3, m=1e6, b=1e9)
         self.punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
 
@@ -23,23 +28,30 @@ class Bot(commands.Bot):
         # We are logged in and ready to chat and use commands...
         print(f'Logged in as | {self.nick}')
         print(f'User id is | {self.user_id}')
+        print(f'Channels | {self.connected_channels}')
 
     @commands.command()
-    async def hello(self, ctx: commands.Context):
+    async def botcheck(self, ctx: commands.Context):
         # Here we have a command hello, we can invoke our command with our prefix and command name
         # e.g ?hello
         # We can also give our commands aliases (different names) to invoke with.
 
         # Send a hello back!
         # Sending a reply back to the channel is easy... Below is an example.
-        await ctx.send(f'Hello {ctx.author.name}!')
+        if ctx.author.is_broadcaster or ctx.author.display_name == "DoomerCreatine":
+            await ctx.send(f'{self.nick} is online and running {ctx.author.display_name}')
         
     @commands.command()
     async def start(self, ctx: commands.Context):
-        if ctx.author.is_mod or ctx.author.is_broadcaster:
-            self.guesses = {}
-            self.log_guesses = True
-            await ctx.send("Guessing has begun!")
+        if ctx.author.is_broadcaster:
+            if not self.log_guesses:
+                self.messages.clear()
+                self.guesses.clear()
+                self.log_guesses = True
+                await ctx.send("Guessing for Master Casket value is now OPEN!")
+                print("guessing has begun")
+            else:
+                await ctx.send("Guessing already enabled, please ?end before starting a new one.")
         
         
     async def event_message(self, message):
@@ -50,21 +62,25 @@ class Bot(commands.Bot):
 
         # Parse each users message and extract the guess
         if self.log_guesses and '?' not in message.content:
-            # Regex to try and wrangle the guesses into a consistent int format
-            formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
-            formatted_v = re.sub(r',', '.', formatted_v).lower()
-            
-            # If the chatter used k, m, or b for shorthand, attempt to convert to int
-            try:
-                if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
-                    formatted_v = int(float(formatted_v[0:-1]) * self.tens[formatted_v[-1]])
-                else:
-                    formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
-                    formatted_v = int(formatted_v)
-            except:
-                await commands.Context.send(f"Sorry, could not parse @{message.author.display_name} guess.")
-            self.guesses[message.author.display_name] = formatted_v
-        print(message.content)
+            if message.author.display_name in self.guesses.keys():
+                await message.channel.send(f"You have guessed already {message.author.display_name}. You have been removed from this round NothingYouCanDo")
+                self.guesses[message.author.display_name] = ""
+            else:
+                # Regex to try and wrangle the guesses into a consistent int format
+                formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
+                formatted_v = re.sub(r',', '.', formatted_v).lower()
+                
+                # If the chatter used k, m, or b for shorthand, attempt to convert to int
+                try:
+                    if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
+                        formatted_v = int(float(formatted_v[0:-1]) * self.tens[formatted_v[-1]])
+                    else:
+                        formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
+                        formatted_v = int(formatted_v)
+                except:
+                    await commands.Context.send(f"Sorry, could not parse @{message.author.display_name} guess.")
+                self.messages[message.author.display_name] = message.content
+                self.guesses[message.author.display_name] = formatted_v
         
         # Since we have commands and are overriding the default `event_message`
         # We must let the bot know we want to handle and invoke our commands...
@@ -73,26 +89,37 @@ class Bot(commands.Bot):
     # Closes the guess logging
     @commands.command()
     async def end(self, ctx: commands.Context):
-        if ctx.author.is_mod or ctx.author.is_broadcaster:
+        if ctx.author.is_broadcaster:
             if not self.log_guesses:
-                await ctx.send("Guessing currently not enabled.")
+                await ctx.send("Guessing is not currently enabled, oops. mericCat")
+                print("Guessing not enabled.")
             else:
                 self.log_guesses = False
-                await ctx.send("Guessing has ended!")
+                await ctx.send("Guessing for the Master Casket is now CLOSED! PauseChamp")
+                print("guessing has ended.")
     
     @commands.command()
     async def winner(self, ctx: commands.Context, casket: int):
-        if ctx.author.is_mod or ctx.author.is_broadcaster:
-            if self.guesses:
-                if not self.log_guesses:
+        if ctx.author.is_broadcaster:
+            if not self.log_guesses:  
+                self.guesses = {k: v for k, v in self.guesses.items() if v}
+                if self.guesses:                 
                     res_key, res_val = min(self.guesses.items(), key=lambda x: abs(casket - x[1]))
-                    await ctx.send(f"Casket value: {casket} (Closest guess: {res_key} with a guess of {res_val} [Difference: {abs(casket - self.guesses[res_key])}]")
+                    await ctx.send(f"Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: { '{:,}'.format(abs(casket - self.guesses[res_key])) }]")
+                    print(f"Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: {abs(casket - self.guesses[res_key])}]")
+                    #subprocess.call(f'sudo echo "Recent winner: {res_key}" > /dev/fb01', shell=True)
                 else:
-                    await ctx.send("Please end the guessing before choosing a winner.")
+                    await ctx.send("Something went wrong, there were no guesses saved. mericChicken")
+                    print("No guesses logged.")
                 # Make sure to clear the dictionary so that past guesses aren't included
-                self.guesses.clear()
+                async with aiofiles.open(f'./logging/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}.txt', 'w+') as f:
+                    print("writing")
+                    await f.write(json.dumps([self.messages, self.guesses, {'casket': casket}], indent=4))
             else:
-                await ctx.send("No guesses logged.")
+                await ctx.send("Hey you need to ?end the guessing first 4Head")
+                print("Please end the guessing before choosing a winner.")
+
+        
 
 
 bot = Bot()
