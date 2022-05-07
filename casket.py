@@ -49,7 +49,7 @@ class Bot(commands.Bot):
                 self.guesses.clear()
                 self.log_guesses = True
                 await ctx.send("Guessing for Master Casket value is now OPEN!")
-                print("guessing has begun")
+                print(f"{ctx.author.display_name} has started logging guesses in channel: {ctx.channel.name}")
             else:
                 await ctx.send("Guessing already enabled, please ?end before starting a new one.")
         
