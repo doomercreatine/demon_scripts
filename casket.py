@@ -113,7 +113,7 @@ class Bot(commands.Bot):
                     await ctx.send("Something went wrong, there were no guesses saved. mericChicken")
                     print(f"{ctx.author.display_name} tried picking a winner in {ctx.channel.name}, but no guesses were logged.")
                 # Make sure to clear the dictionary so that past guesses aren't included
-                async with aiofiles.open(f'/home/Desktop/logging/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}-{ctx.channel.name}.txt', 'w+') as f:
+                async with aiofiles.open(f'./logging/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}-{ctx.channel.name}.txt', 'w+') as f:
                     print(f"{ctx.author.display_name} has chosen a winner in {ctx.channel.name}. Writing guesses to file.")
                     await f.write(json.dumps([self.messages, self.guesses, {'casket': casket}], indent=4))
             else:
