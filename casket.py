@@ -13,9 +13,10 @@ import subprocess
 class Bot(commands.Bot):
 
     def __init__(self):
-        # Initialise our Bot with our access token, prefix and a list of channels to join on boot...
-        # prefix can be a callable, which returns a list of strings or a string...
-        # initial_channels can also be a callable which returns a list of strings...
+        """
+            Token and initial channels are found in config.py which is a dictionary.
+            self.guesses
+        """
         super().__init__(token=config['token'], prefix='?', initial_channels=config['channels'])
         self.log_guesses = False
         self.guesses = {}
@@ -78,7 +79,7 @@ class Bot(commands.Bot):
                         formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
                         formatted_v = int(formatted_v)
                 except:
-                    await commands.Context.send(f"Sorry, could not parse @{message.author.display_name} guess.")
+                    await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
                 self.messages[message.author.display_name] = message.content
                 self.guesses[message.author.display_name] = formatted_v
         
