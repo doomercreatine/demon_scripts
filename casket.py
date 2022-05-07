@@ -78,10 +78,11 @@ class Bot(commands.Bot):
                     else:
                         formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
                         formatted_v = int(formatted_v)
+                    self.guesses[message.author.display_name] = formatted_v
                 except:
                     await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
                 self.messages[message.author.display_name] = message.content
-                self.guesses[message.author.display_name] = formatted_v
+                
         
         # Since we have commands and are overriding the default `event_message`
         # We must let the bot know we want to handle and invoke our commands...
