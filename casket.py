@@ -9,7 +9,7 @@ import datetime
 import aiofiles
 import subprocess
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.INFO)
 
 class Bot(commands.Bot):
 
