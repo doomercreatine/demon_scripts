@@ -9,7 +9,7 @@ import datetime
 import aiofiles
 import subprocess
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s')
+logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
 
 class Bot(commands.Bot):
 
@@ -24,7 +24,6 @@ class Bot(commands.Bot):
         self.messages = {}
         self.tens = dict(k=1e3, m=1e6, b=1e9)
         self.punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
-        logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
 
     async def event_ready(self):
         # Notify us when everything is ready!
