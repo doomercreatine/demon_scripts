@@ -127,7 +127,7 @@ class Bot(commands.Bot):
 
         
 
-if '__name__' == '__main__':
-    logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
-    bot = Bot()
-    bot.run()
+
+logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
+bot = Bot()
+bot.run()
