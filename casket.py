@@ -1,4 +1,13 @@
-# Twitch Bot to Determine Casket winners
+"""
+    Project: Master Casket Guess Bot
+    Author: DoomerCreatine <https://github.com/doomercreatine> <https://twitch.tv/doomercreatine>
+    Description: Twitch chat bot that allows the streamer to start logging chatters guesses for master casket value.
+                 Commands are restricted to the broadcaster.
+    Basic functionality:
+        ?start | Begins logging chatters guesses
+        ?end | Stops logging chatters guesses
+        ?winner <INT> | Takes the casket value <INT> and finds the chatter with the lowest absolute difference and tags them in chat.
+"""
 
 from email import message
 from twitchio.ext import commands
@@ -9,14 +18,20 @@ import datetime
 import aiofiles
 import subprocess
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
 
 class Bot(commands.Bot):
 
     def __init__(self):
         """
-            Token and initial channels are found in config.py which is a dictionary.
-            self.guesses
+            Token and initial channels are found in config.py which is a dictionary in the format below:
+            {
+                'token': <TOKEN>,
+                'channels': [<CHANNEL>, ...]
+            }
+            
+            Tokens can be generated for your Twitch account at https://twitchapps.com/tmi/
+            Remember to KEEP YOUR TOKEN PRIVATE! DO NOT SHARE WITH OTHERS
         """
         super().__init__(token=config['token'], prefix='?', initial_channels=config['channels'])
         self.log_guesses = False
@@ -70,24 +85,25 @@ class Bot(commands.Bot):
                 await message.channel.send(f"You have guessed already {message.author.display_name}. You have been removed from this round NothingYouCanDo")
                 self.guesses[message.author.display_name] = ""
             else:
-                # Regex to try and wrangle the guesses into a consistent int format
-                formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
-                formatted_v = re.sub(r',', '.', formatted_v).lower()
-                
-                # If the chatter used k, m, or b for shorthand, attempt to convert to int
+                # If chatter has not guessed, attempt to find a guess in their message
                 try:
+                    # Regex to try and wrangle the guesses into a consistent int format
+                    formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
+                    formatted_v = re.sub(r',', '.', formatted_v).lower()
+                    # If the chatter used k, m, or b for shorthand, attempt to convert to int
                     if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
                         formatted_v = int(float(formatted_v[0:-1]) * self.tens[formatted_v[-1]])
                     else:
                         formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
                         formatted_v = int(formatted_v)
                     self.guesses[message.author.display_name] = formatted_v
-                except:
+                # If no regex match is detected, log that for review
+                except Exception as e:
                     #await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
-                    logging.error(f"Sorry, could not parse @{message.author.display_name} guess.")
+                    logging.error(f"Sorry, could not parse @{message.author.display_name} guess. {message.content}")
+                    logging.error(e)
                 self.messages[message.author.display_name] = message.content
                 
-        
         # Since we have commands and are overriding the default `event_message`
         # We must let the bot know we want to handle and invoke our commands...
         await self.handle_commands(message)
@@ -104,17 +120,31 @@ class Bot(commands.Bot):
                 await ctx.send("Guessing for the Master Casket is now CLOSED! PauseChamp")
                 print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} has ended logging guesses in channel: {ctx.channel.name}")
     
+        """_summary_
+        Command to determine the winner. Find the chatter who's guess was closest to the actual casket value.
+        All guesses and raw messages are logged for future review.
+        """
     @commands.command()
-    async def winner(self, ctx: commands.Context, casket: int):
+    async def winner(self, ctx: commands.Context, casket: str):
+        formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", casket).group().strip()
+        formatted_v = re.sub(r',', '.', formatted_v).lower()
+        # If the chatter used k, m, or b for shorthand, attempt to convert to int
+        if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
+            casket = int(float(formatted_v[0:-1]) * self.tens[formatted_v[-1]])
+        else:
+            formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
+            casket = int(formatted_v)
         if ctx.author.is_broadcaster:
             if not self.log_guesses:  
                 self.guesses = {k: v for k, v in self.guesses.items() if v}
-                if self.guesses:                 
+                if self.guesses:   
+                    # Find minimum absolute difference between casket value and chatter guesses              
                     res_key, res_val = min(self.guesses.items(), key=lambda x: abs(casket - x[1]))
                     await ctx.send(f"Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: { '{:,}'.format(abs(casket - self.guesses[res_key])) }]")
                     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: {abs(casket - self.guesses[res_key])}]")
                     #subprocess.call(f'sudo echo "Recent winner: {res_key}" > /dev/fb01', shell=True)
                 else:
+                    # If for some reason no winner was found we need to review later. Not expected to happen with a large chat
                     await ctx.send("Something went wrong, there were no guesses saved. mericChicken")
                     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} tried picking a winner in {ctx.channel.name}, but no guesses were logged.")
                     logging.error(f'No guesses were found for a winner. {json.dumps([self.messages, self.guesses], indent=4)}')
