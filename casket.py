@@ -42,6 +42,11 @@ class Bot(commands.Bot):
         self.tens = dict(k=1e3, m=1e6, b=1e9)
         self.punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
         self.emote_list = []
+        
+        """
+            Need to fetch the BTTV and FFZ emotes so they can be removed from guesses. 
+            TO DO: Move these to an initialize() function so that the __init__ function isn't this cluttered
+        """
         bttv = requests.get(
             "https://api.betterttv.net/2/channels/hey_jase"
         )
@@ -50,9 +55,6 @@ class Bot(commands.Bot):
         ffz = requests.get(
             "https://api.frankerfacez.com/v1/room/hey_jase"
         )
-
-        #print(json.dumps(ffz.json(), indent = 4))
-
         for emote in ffz.json()['sets']['318206']['emoticons']:
             self.emote_list.append(emote['name'])
 
@@ -89,12 +91,7 @@ class Bot(commands.Bot):
 
     @commands.command()
     async def botcheck(self, ctx: commands.Context):
-        # Here we have a command hello, we can invoke our command with our prefix and command name
-        # e.g ?hello
-        # We can also give our commands aliases (different names) to invoke with.
-
-        # Send a hello back!
-        # Sending a reply back to the channel is easy... Below is an example.
+        # Check to make sure the bot is connected and sending messages
         if ctx.author.is_broadcaster or ctx.author.display_name == "DoomerCreatine":
             await ctx.send(f'{self.nick} is online and running {ctx.author.display_name}')
             print(f'[{datetime.datetime.now().strftime("%H:%M:%S")}] {ctx.author.display_name} has checked if the bot is online in {ctx.channel.name}')
@@ -118,7 +115,7 @@ class Bot(commands.Bot):
         if message.echo:
             return
         # Parse each users message and extract the guess
-        if self.log_guesses and '?' not in message.content:
+        if self.log_guesses and '?' not in message.content and message.author.display_name != "Nightbot" and message.author.display_name != "LehrulesBot":
                 # If chatter has not guessed, attempt to find a guess in their message
                 # First let's remove all emotes from the message
             emote_idx = message.tags['emotes'].split("/")
