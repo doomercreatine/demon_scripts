@@ -18,6 +18,8 @@ import datetime
 import aiofiles
 import subprocess
 import logging
+import requests
+
 logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
 
 class Bot(commands.Bot):
@@ -39,6 +41,31 @@ class Bot(commands.Bot):
         self.messages = {}
         self.tens = dict(k=1e3, m=1e6, b=1e9)
         self.punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+        self.emote_list = []
+        bttv = requests.get(
+            "https://api.betterttv.net/2/channels/doomercreatine"
+        )
+
+            
+        ffz = requests.get(
+            "https://api.frankerfacez.com/v1/room/doomercreatine"
+        )
+
+        #print(json.dumps(ffz.json(), indent = 4))
+
+        for emote in ffz.json()['sets']['1264865']['emoticons']:
+            self.emote_list.append(emote['name'])
+
+        for emote in bttv.json()['emotes']:
+            self.emote_list.append(emote['code'])
+            
+        self.emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                           "]+", flags=re.UNICODE)
+
 
     async def event_ready(self):
         # Notify us when everything is ready!
@@ -47,6 +74,18 @@ class Bot(commands.Bot):
         print(f'User id is | {self.user_id}')
         print(f'Channels | {self.connected_channels}')
         logging.info(f"Bot connected as {self.nick} in channels {self.connected_channels}")
+    
+    def emote_filter(self, text, index):
+        new_text = list(text)
+        if len(index)>=1:
+            for idx in index:
+                idx_start = int(idx.split("-")[0])
+                idx_end = int(idx.split("-")[1])+1
+                for i in range(idx_start, idx_end):
+                    new_text[i] = ""
+        emote_rem = re.sub(' +', ' ', ''.join(new_text).strip())
+        emote_rem = ''.join([word for word in emote_rem.split() if word not in self.emote_list])
+        return(self.emoji_pattern.sub(r'', emote_rem))
 
     @commands.command()
     async def botcheck(self, ctx: commands.Context):
@@ -78,13 +117,18 @@ class Bot(commands.Bot):
         # For now we just want to ignore them...
         if message.echo:
             return
-
         # Parse each users message and extract the guess
         if self.log_guesses and '?' not in message.content:
                 # If chatter has not guessed, attempt to find a guess in their message
+                # First let's remove all emotes from the message
+            emote_idx = message.tags['emotes'].split("/")
+            emote_idx = [i for i in emote_idx if i]
+            if len(emote_idx) > 0:
+                emote_idx = [m.split(":")[1] for m in emote_idx]
+            new_message = self.emote_filter(text=message.content, index=emote_idx)
             try:
                 # Regex to try and wrangle the guesses into a consistent int format
-                formatted_v = re.search(r"(?<![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ])[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.]*[kKmMbB]{0,1}\s*[0-9]*", message.content).group().strip()
+                formatted_v = re.search(r"(?<![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ])[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.]*[kKmMbB]{0,1}\s*[0-9]*", new_message).group().strip()
                 if formatted_v:
                     formatted_v = re.sub(r',', '.', formatted_v).lower()
                     # If the chatter used k, m, or b for shorthand, attempt to convert to int
