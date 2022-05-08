@@ -43,17 +43,17 @@ class Bot(commands.Bot):
         self.punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
         self.emote_list = []
         bttv = requests.get(
-            "https://api.betterttv.net/2/channels/doomercreatine"
+            "https://api.betterttv.net/2/channels/hey_jase"
         )
 
             
         ffz = requests.get(
-            "https://api.frankerfacez.com/v1/room/doomercreatine"
+            "https://api.frankerfacez.com/v1/room/hey_jase"
         )
 
         #print(json.dumps(ffz.json(), indent = 4))
 
-        for emote in ffz.json()['sets']['1264865']['emoticons']:
+        for emote in ffz.json()['sets']['318206']['emoticons']:
             self.emote_list.append(emote['name'])
 
         for emote in bttv.json()['emotes']:
