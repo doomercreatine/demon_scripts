@@ -84,7 +84,7 @@ class Bot(commands.Bot):
                 # If chatter has not guessed, attempt to find a guess in their message
             try:
                 # Regex to try and wrangle the guesses into a consistent int format
-                formatted_v = re.search(r"[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
+                formatted_v = re.search(r"(?<![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ])[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.]*[kKmMbB]{0,1}\s*[0-9]*", message.content).group().strip()
                 if formatted_v:
                     formatted_v = re.sub(r',', '.', formatted_v).lower()
                     # If the chatter used k, m, or b for shorthand, attempt to convert to int
@@ -126,7 +126,7 @@ class Bot(commands.Bot):
         """
     @commands.command()
     async def winner(self, ctx: commands.Context, casket: str):
-        formatted_v = re.search(r"[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.kKmMbB]*\s*[0-9]*", casket).group().strip()
+        formatted_v = re.search(r"(?<![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ])[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.]*[kKmMbB]{0,1}\s*[0-9]*", casket).group().strip()
         formatted_v = re.sub(r',', '.', formatted_v).lower()
         # If the chatter used k, m, or b for shorthand, attempt to convert to int
         if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
