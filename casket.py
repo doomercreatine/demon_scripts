@@ -83,7 +83,8 @@ class Bot(commands.Bot):
                         formatted_v = int(formatted_v)
                     self.guesses[message.author.display_name] = formatted_v
                 except:
-                    await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
+                    #await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
+                    logging.error(f"Sorry, could not parse @{message.author.display_name} guess.")
                 self.messages[message.author.display_name] = message.content
                 
         
