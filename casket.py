@@ -81,14 +81,11 @@ class Bot(commands.Bot):
 
         # Parse each users message and extract the guess
         if self.log_guesses and '?' not in message.content:
-            if message.author.display_name in self.guesses.keys():
-                await message.channel.send(f"You have guessed already {message.author.display_name}. You have been removed from this round NothingYouCanDo")
-                self.guesses[message.author.display_name] = ""
-            else:
                 # If chatter has not guessed, attempt to find a guess in their message
-                try:
-                    # Regex to try and wrangle the guesses into a consistent int format
-                    formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
+            try:
+                # Regex to try and wrangle the guesses into a consistent int format
+                formatted_v = re.search(r"[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.kKmMbB]*\s*[0-9]*", message.content).group().strip()
+                if formatted_v:
                     formatted_v = re.sub(r',', '.', formatted_v).lower()
                     # If the chatter used k, m, or b for shorthand, attempt to convert to int
                     if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
@@ -96,13 +93,16 @@ class Bot(commands.Bot):
                     else:
                         formatted_v = re.sub(r'[^\w\s]', '', formatted_v).lower()
                         formatted_v = int(formatted_v)
+                    if formatted_v and message.author.display_name in self.guesses.keys():
+                        await message.channel.send(f"You have guessed already {message.author.display_name}. You have been removed from this round NothingYouCanDo")
+                        self.guesses[message.author.display_name] = ""
                     self.guesses[message.author.display_name] = formatted_v
-                # If no regex match is detected, log that for review
-                except Exception as e:
-                    #await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
-                    logging.error(f"Sorry, could not parse @{message.author.display_name} guess. {message.content}")
-                    logging.error(e)
-                self.messages[message.author.display_name] = message.content
+            # If no regex match is detected, log that for review
+            except Exception as e:
+                #await message.channel.send(f"Sorry, could not parse @{message.author.display_name} guess.")
+                logging.error(f"Sorry, could not parse @{message.author.display_name} guess. {message.content}")
+                logging.error(e)
+            self.messages[message.author.display_name] = message.content
                 
         # Since we have commands and are overriding the default `event_message`
         # We must let the bot know we want to handle and invoke our commands...
@@ -126,7 +126,7 @@ class Bot(commands.Bot):
         """
     @commands.command()
     async def winner(self, ctx: commands.Context, casket: str):
-        formatted_v = re.search(r"[0-9\s,.]+\s*[,.kKmMbB]*\s*[0-9]*", casket).group().strip()
+        formatted_v = re.search(r"[0-9\s,.]+(?![aAcCdDeEfFgGhHiIjJlLnNoOpPqQrRsStTuUvVwWxXyYzZ]+\b)\s*[,.kKmMbB]*\s*[0-9]*", casket).group().strip()
         formatted_v = re.sub(r',', '.', formatted_v).lower()
         # If the chatter used k, m, or b for shorthand, attempt to convert to int
         if 'k' in formatted_v or 'm' in formatted_v or 'b' in formatted_v:
