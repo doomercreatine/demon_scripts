@@ -8,7 +8,8 @@ import json
 import datetime
 import aiofiles
 import subprocess
-
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s')
 
 class Bot(commands.Bot):
 
@@ -30,6 +31,7 @@ class Bot(commands.Bot):
         print(f'Logged in as | {self.nick}')
         print(f'User id is | {self.user_id}')
         print(f'Channels | {self.connected_channels}')
+        logging.info(f"Bot connected as {self.nick} in channels {self.connected_channels}")
 
     @commands.command()
     async def botcheck(self, ctx: commands.Context):
@@ -41,6 +43,7 @@ class Bot(commands.Bot):
         # Sending a reply back to the channel is easy... Below is an example.
         if ctx.author.is_broadcaster or ctx.author.display_name == "DoomerCreatine":
             await ctx.send(f'{self.nick} is online and running {ctx.author.display_name}')
+            print(f'[{datetime.datetime.now().strftime("%H:%M:%S")}] {ctx.author.display_name} has checked if the bot is online in {ctx.channel.name}')
         
     @commands.command()
     async def start(self, ctx: commands.Context):
@@ -50,7 +53,7 @@ class Bot(commands.Bot):
                 self.guesses.clear()
                 self.log_guesses = True
                 await ctx.send("Guessing for Master Casket value is now OPEN!")
-                print(f"{ctx.author.display_name} has started logging guesses in channel: {ctx.channel.name}")
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} has started logging guesses in channel: {ctx.channel.name}")
             else:
                 await ctx.send("Guessing already enabled, please ?end before starting a new one.")
         
@@ -94,12 +97,11 @@ class Bot(commands.Bot):
         if ctx.author.is_broadcaster:
             if not self.log_guesses:
                 await ctx.send("Guessing is not currently enabled, oops. mericCat")
-                print("Guessing not enabled.")
-                print(f"{ctx.author.display_name} tried to end guessing in {ctx.channel.name} but it was not started.")
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} tried to end guessing in {ctx.channel.name} but it was not started.")
             else:
                 self.log_guesses = False
                 await ctx.send("Guessing for the Master Casket is now CLOSED! PauseChamp")
-                print(f"{ctx.author.display_name} has ended logging guesses in channel: {ctx.channel.name}")
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} has ended logging guesses in channel: {ctx.channel.name}")
     
     @commands.command()
     async def winner(self, ctx: commands.Context, casket: int):
@@ -109,21 +111,23 @@ class Bot(commands.Bot):
                 if self.guesses:                 
                     res_key, res_val = min(self.guesses.items(), key=lambda x: abs(casket - x[1]))
                     await ctx.send(f"Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: { '{:,}'.format(abs(casket - self.guesses[res_key])) }]")
-                    print(f"Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: {abs(casket - self.guesses[res_key])}]")
+                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Closest guess: @{res_key} Clap out of {len(self.guesses.keys())} entries with a guess of {'{:,}'.format(res_val)} [Difference: {abs(casket - self.guesses[res_key])}]")
                     #subprocess.call(f'sudo echo "Recent winner: {res_key}" > /dev/fb01', shell=True)
                 else:
                     await ctx.send("Something went wrong, there were no guesses saved. mericChicken")
-                    print(f"{ctx.author.display_name} tried picking a winner in {ctx.channel.name}, but no guesses were logged.")
+                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} tried picking a winner in {ctx.channel.name}, but no guesses were logged.")
+                    logging.error(f'No guesses were found for a winner. {json.dumps([self.messages, self.guesses], indent=4)}')
                 # Make sure to clear the dictionary so that past guesses aren't included
                 async with aiofiles.open(f'./logging/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}-{ctx.channel.name}.txt', 'w+') as f:
-                    print(f"{ctx.author.display_name} has chosen a winner in {ctx.channel.name}. Writing guesses to file.")
+                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} has chosen a winner in {ctx.channel.name}. Writing guesses to file.")
                     await f.write(json.dumps([self.messages, self.guesses, {'casket': casket}], indent=4))
             else:
                 await ctx.send("Hey you need to ?end the guessing first 4Head")
-                print(f"{ctx.author.display_name} tried to pick a winner in {ctx.channel.name} without ending first.")
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {ctx.author.display_name} tried to pick a winner in {ctx.channel.name} without ending first.")
 
         
 
-
-bot = Bot()
-bot.run()
+if '__name__' == '__main__':
+    logging.basicConfig(format='%(asctime)s %(message)s', filename='./casket.log', encoding='utf-8', level=logging.DEBUG)
+    bot = Bot()
+    bot.run()
